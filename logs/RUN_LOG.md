@@ -151,3 +151,143 @@ workflow changes.
 - **Outputs:** Updated `scripts/regulatory-intel/workflow.dev.json` (`Normalize Data` node); `scripts/regulatory-intel/B2-VERIFICATION.md`.
 - **Result:** B2 closed for the Federal Register mislabeling (157-item complaint from `FINDINGS.md`). The 21 "Unknown Source" Google News fallthrough is explicitly left open — no reliable signal exists there (no `dc:creator` on Google News items; some headlines don't contain any of the matched keywords).
 - **Open issues:** 21 Unknown Source (Google News fallthrough, no clear fix path), B3 (Google News URL unwrap, confirmed bigger scrape-based task).
+
+## 2026-09-02 -- Gateway Sprint 1: request logbook
+
+> Logged retroactively on 2026-09-10. Commit `b46d48e` merged these files on
+> 2026-09-02 without a RUN_LOG entry, which the logging rule requires; this
+> entry backfills the record and is not a contemporaneous account.
+
+- **Recipe:** Adaptive Model Routing & Inference Gateway (Sprint 1 of 17). No
+  recipe file yet; this builds the measurement layer routing depends on.
+- **Inputs:** None. No live calls, no fixtures, no API keys, no network.
+- **Commands:** `python -m pytest scripts/gateway/tests -q` (24 passed at merge)
+- **Outputs:** `scripts/gateway/` — `schema.py`, `prices.py`, `prices.json`,
+  `logbook.py`, `report.py`, 4 test files. Merged as `b46d48e`.
+- **Result:** Append-only logbook that separates logical requests from physical
+  attempts, so an escalated request's cost rolls up instead of averaging down.
+  Cost is frozen at log time with its price-table version. An unpriced model
+  raises instead of costing zero. The incorrect per-attempt average is kept,
+  labelled incorrect, and pinned by a test ($4.65 vs $9.30 on a two-attempt
+  escalation).
+- **Broke during testing, fixed:** The writer used `O_APPEND` with one
+  `os.write` per row, which is safe on POSIX. On Windows, concurrent appends
+  through separate handles are not atomic: the concurrency test wrote 153 of
+  200 rows and raised no error. Rows were lost silently. Fixed with a
+  process-local `threading.Lock` plus an OS file lock on a sidecar `.lock` file.
+- **Open issues:** 101 scripts under `scripts/tools|gigo|ingest/` cannot be
+  imported (hyphenated filenames, underscore imports, no `__init__.py`). Not
+  fixed; `scripts/gateway/` avoids that tree. See `scripts/gateway/FINDINGS.md`.
+
+## 2026-09-10 -- Gateway Sprint 2: model connection and first live calls
+
+> Calls 1-3 below ran on 2026-09-02 and were committed in `f8c80ee` with no
+> RUN_LOG entry; they are logged retroactively here. Calls 4-6 ran 2026-09-10.
+
+- **Recipe:** Adaptive Model Routing & Inference Gateway (Sprint 2 of 17).
+- **Gate:** First live call per tier, watched by a human.
+- **Cleared by:** Simba · 2026-09-10
+- **Inputs:** GROQ_API_KEY (free tier); `prices.json` v2026-09-02;
+  `tiers.json` v0.3.0.
+- **Commands:** `python scripts/gateway/first_live_call.py [cheap|mid|strong]`
+  (6 calls).
+- **Outputs:** `scripts/gateway/adapters/` (`base.py`, `fake.py`, `groq.py`),
+  `client.py`, `tiers.py`, `tiers.json`, `first_live_call.py`, 4 test files;
+  `logs/gateway/first-live-call.jsonl` (6 rows); `FINDINGS.md` updated.
+- **Result:** One client for all three tiers; every call, including failures,
+  writes a logbook row before returning. All three tiers live-gated on Groq:
+  `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, `qwen/qwen3.6-27b`. Every
+  successful call's cost was recomputed from the price table and matched the
+  log exactly. A real 401 classified as `provider_error` with a row written and
+  no crash. Total spend $0.00138.
+- **Broke during testing, fixed:**
+  - `max_tokens=16` returned empty text: `gpt-oss` spent the whole budget on
+    reasoning. Raised to 256.
+  - `qwen3.6-27b` returned its reasoning inline in `<think>` tags ahead of the
+    answer. The response passed every gate check. Fixed with
+    `strip_reasoning()` in the adapter and an answer check in the gate script;
+    verified on a second live call.
+  - The gate script exited 0 even when it listed problems. Now exits 1.
+  - `test_the_shipped_config_loads` still asserted the Ollama tier after the
+    ladder changed. Updated.
+- **Findings:** see `scripts/gateway/FINDINGS.md` section 5. In short: observed
+  tier spreads were 1.4x and 19-26x against sticker 2x and 10x; qwen's
+  reasoning length varied 35% on an identical prompt; the strong tier used 245
+  of 256 tokens; input tokens depend on the model (78 vs 17); `ok` does not
+  mean the answer is usable.
+- **Not verified:** Groq console usage for these calls — the one check the
+  code cannot do on itself.
+- **Open issues:**
+  - GROQ_API_KEY used for these calls must be rotated before further use (it
+    was exposed outside the terminal).
+  - Groq publishes no per-token rate for the repo's evidenced Llama models;
+    tiers moved to publicly priced models. See FINDINGS.md section 4.
+  - All tiers share one provider and key: a rate limit or auth failure takes
+    out the whole ladder. Relevant to Sprint 4.
+  - `f8c80ee` committed `logs/gateway/first-live-call.jsonl.lock`, a runtime
+    lock sidecar. It should be untracked and ignored.
+
+## 2026-09-10 -- Gateway Sprint 3: task policy, router, frozen fixture set
+
+- **Recipe:** Adaptive Model Routing & Inference Gateway (Sprint 3 of 17).
+- **Gate:** Fixture labels set by a named human before any model run; set frozen.
+- **Labeled and frozen by:** Simba · 2026-09-10
+- **Inputs:** LLM node scripts under `scripts/tools/` and their recipes, as
+  evidence of what task types Mycroft performs. No live calls, no API key.
+- **Commands:** `python scripts/gateway/bench/label.py --by "Simba"` (plus
+  `--ids` relabel passes); `python scripts/gateway/bench/audit.py --freeze`;
+  `python -m pytest scripts/gateway/tests -q` (96 passed).
+- **Outputs:** `policy.json` v0.1.0 + `policy.py` (six locked task types, per-tier
+  `max_tokens`, start tier and escalation target per type); `router.py`;
+  `bench/fixtures.py`, `bench/audit.py`, `bench/label.py`; 24 fixtures in
+  `bench/fixtures/*.jsonl`; `bench/manifest.json` (frozen 2026-09-10, SHA-256
+  per file); tests `test_policy.py`, `test_router.py`, `test_fixtures.py`,
+  `test_label.py`.
+- **Result:**
+  - Six task types locked: sentiment, topic, structured extraction,
+    contradiction detection, summarization, RAG answer. Each cites evidence
+    files; a test fails if any evidence path stops existing.
+  - Router is a pure function of task type and input length (characters, not
+    tokens, since token counts depend on the model). Pinned and unknown task
+    types are refused, never defaulted. Every decision carries a one-sentence
+    explanation. The break-even rule is deliberately excluded: it is the
+    Sprint 8 "clever version" and needs measured pass rates.
+  - 24 synthetic fixtures, 4 per type (2 easy, 2 hard), fictional companies.
+    Labeler tiers: cheap 6, mid 11, strong 7. Router: cheap 8, mid 16, strong 0.
+    Router agrees with the labels on 9 of 24. The labels are predictions; this
+    is not yet a measurement.
+- **Decisions:**
+  - Fixtures are synthetic, not real as the board specified. No real request
+    corpus exists in the repo: 203 of 217 script sample payloads are generic
+    placeholders, `data/raw/market-sentiment-analysis-part-1/sample/` declares
+    itself synthetic, and the Klarna mock transactions file holds 0 records.
+    Claims are scoped to how models handle these task types, not to Mycroft's
+    traffic mix.
+  - `expected_tier` means the cheapest tier the labeler expects to get it
+    right: a judgment, not the router's rule applied by hand.
+  - Task types and routing rules share one file so they cannot disagree.
+- **Broke during testing, fixed:**
+  - The labeling tool did not show the task definition (e.g. "sentiment toward
+    the named company"). Now prints a `TASK:` line. `--redo` and `--ids` added.
+  - The first labeling session put every fixture on cheap, traps included; the
+    second used the two-question standard (trap? reasoning step?). The first
+    session's fixtures were relabeled.
+- **Findings:** see `scripts/gateway/FINDINGS.md` section 6. The simple router
+  cannot send a short input to strong. Deterministic validators catch malformed
+  answers, not wrong ones, so a misread trap returns a valid label and does not
+  escalate.
+- **Open issues:**
+  - **Answer key flagged in review, pending the labeler's decision:** `sent-001`
+    is frozen as `negative` for a headline about beating estimates and raising
+    guidance; `sent-004` is `negative` though the named company won the
+    contract; `contra-003` is `contradiction` where the draft had
+    `insufficient_evidence` (debatable). Must be resolved — unfreeze, relabel,
+    refreeze, logged — before any Sprint 7 run grades against it.
+  - The label prompt says "Expected label", which reads as a prediction of the
+    model's output. It means the correct answer; the wording should say so.
+  - Coverage is 4 of the 30 targeted per type; 26 short per type carried over.
+  - No long-input fixtures: the router's length promotion is covered by unit
+    tests only.
+  - One labeler; no agreement measure.
+  - Recommendation for Sprint 7: run every fixture on all three tiers (about a
+    cent) so the cheapest correct tier is measured rather than predicted.
