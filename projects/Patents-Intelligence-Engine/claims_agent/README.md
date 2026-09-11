@@ -37,8 +37,8 @@ Two things that make this manageable:
   same query against the same patent is free. All of our test scripts
   reuse the same known set of patents for this reason — check
   `test_connection.py`, `test_real_parse.py`, `test_multi_dependent.py`,
-  and `test_broader_domains.py` for the specific publication numbers
-  already paid for and cached.
+  `test_broader_domains.py`, and `test_lineage_agent.py` for the
+  specific publication numbers already paid for and cached.
 
 A smaller, cheaper-looking table
 (`patents-public-data.uspto_oce_claims.patent_claims_fulltext`, ~29 GB
@@ -94,6 +94,35 @@ are actually drafted, or it could be a real bias in the classifier
 toward "narrow/defensive" as a safer-sounding default. Worth watching
 as more patents are tested, not yet concluded either way.
 
+## Lineage Agent — backward citations (first build)
+
+`lineage_agent.py` traces a patent's citation lineage. The first build
+covers **backward citations only** — what a patent cites — since
+that's a direct field (`citation`, a `REPEATED RECORD`) on the same
+row already being queried for claims text, genuinely cheap with no
+separate lookup needed.
+
+**Forward citations (who cites this patent) are not implemented.**
+That would require searching for a patent's publication number inside
+*other* patents' `citation` arrays — a different, likely much more
+expensive query pattern that hasn't been tested for real cost on this
+table, and is deliberately deferred.
+
+A real bug was found and fixed while building this: BigQuery returns
+**empty strings, not `None`**, for missing fields in this table's
+`citation` records. The original `is_non_patent_literature` check used
+`npl_text is not None`, which is always true here since the field is
+never actually `None` — only ever a real string or `''`. Fixed to
+check for genuinely non-empty text instead. Verified against real
+data (`US-10822628-B2`, 12 real citations: 1 real patent citation, 11
+real academic-paper citations, confirmed by hand against the raw
+`npl_text` values).
+
+Also observed but not yet acted on: the `category` field sometimes
+contains comma-separated values (e.g. `"APP,APP"`, `"SEA,SEA"`) rather
+than a single code — worth understanding before using `category` for
+anything downstream.
+
 ## What's tested, and how confident to be in each part
 
 | Component | Tested against | Confidence |
@@ -101,12 +130,14 @@ as more patents are tested, not yet concluded either way.
 | `claims_parser.py` split/classify | 7 real patents, 82 claims total, verified by hand | High — every claim correct, including a real formatting-variant fix |
 | `flag_multi_dependency` | Original 4 patents; one confirmed false-positive found and fixed | High, after the fix |
 | `claim_classifier.py` scope reading | 8 real independent claims across 4 patents, 4 domains (semiconductor, mechanical, robotics, medical device) | Moderate — every result was well-reasoned with specific, checkable caveats, but the "always narrow/defensive" pattern is an open question |
+| `lineage_agent.py` backward citations | 1 real patent, 12 real citation entries, verified by hand against raw data | Moderate — the field-access pattern and the empty-string bug are both confirmed fixed, but only tested against one patent so far |
 
 ## Files
 
 - `claims_parser.py` — split/classify logic, tested, handles two known claim-numbering formats
 - `claim_classifier.py` — Claude-based protection-scope classification
 - `claims_agent.py` — the real `ClaimsAgent` class wiring both together
+- `lineage_agent.py` — the real `LineageAgent` class, backward citations only so far
 - `test_connection.py` — verifies BigQuery access end-to-end
 - `test_real_parse.py` — pulls and parses one real patent's full claims text
 - `test_multi_dependent.py` — stress test against 3 more real patents, exact-match queries only
@@ -115,9 +146,12 @@ as more patents are tested, not yet concluded either way.
 - `inspect_independent_claims.py` — structural stats (word count, limitation markers) across known independent claims — the real evidence that these don't cleanly predict scope, which is why classification uses an LLM call rather than a heuristic
 - `test_classifier_first_run.py` — first real test of the classifier alone
 - `test_claims_agent.py` — real end-to-end test of the full `ClaimsAgent` class
+- `test_lineage_agent.py` — first real test of `LineageAgent`, including the field-access verification that found the empty-string bug
+- `inspect_all_citations.py` — the investigation that confirmed the empty-string fix was correct, not just coincidentally unchanged
 
 ## Not built yet
 
-- Wiring `ClaimsAgent` into whatever will actually call it in production (a CLI, a batch job, etc. — currently it's a class with test scripts, not a deployed service)
-- The Lineage Agent's citation-tracing logic (not started)
+- Wiring `ClaimsAgent` and `LineageAgent` into whatever will actually call them in production (a CLI, a batch job, etc. — currently they're classes with test scripts, not a deployed service)
+- Forward citations in the Lineage Agent (who cites this patent) — deliberately deferred, real query cost untested
 - Explaining the "always narrow/defensive" pattern in classifier results — more real patents needed before concluding whether it's a real signal or a classifier bias
+- Testing `LineageAgent` against more than one real patent — only verified against a single, NPL-heavy patent so far
