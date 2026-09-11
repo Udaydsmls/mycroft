@@ -17,6 +17,9 @@
   "duplicates_deferred_to_step_4": true,
   "freshness_deferred_to_step_4": true,
   "node": "Validate data shape",
+  "promoted_locators": [
+    "records[0].\"Global Quote\""
+  ],
   "record_count": 1,
   "record_count_basis": "rows that passed shape validation and were promoted",
   "records": [

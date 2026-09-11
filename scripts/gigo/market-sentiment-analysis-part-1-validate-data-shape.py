@@ -280,9 +280,14 @@ def _validate_file(path: Path, root: Path, schema: dict[str, Any]) -> dict[str, 
     })
 
     # Only rows that pass shape validation are promoted (P2).
-    promoted = [row for i, (_loc, row) in enumerate(rows) if i not in set(failing_idx)]
-    finding['rows_promoted'] = len(promoted)
-    finding['promoted_records'] = promoted
+    failed = set(failing_idx)
+    kept = [(loc, row) for i, (loc, row) in enumerate(rows) if i not in failed]
+    finding['rows_promoted'] = len(kept)
+    finding['promoted_records'] = [row for _loc, row in kept]
+    # Index-aligned with promoted_records. Step 4 reports its findings against the ORIGINAL
+    # raw locator, not a position in the shortened verified list, so the trace chain from a
+    # score back to a byte range in a named source file stays intact (P3).
+    finding['promoted_locators'] = [loc for loc, _row in kept]
     return finding
 
 
@@ -332,6 +337,7 @@ def validate_data_shape(payload: Any = None, root: Path | None = None) -> dict[s
             'record_count': f['rows_promoted'],
             'record_count_basis': 'rows that passed shape validation and were promoted',
             'records': f['promoted_records'],
+            'promoted_locators': f['promoted_locators'],
             'shape_validation': {
                 'rows_seen': f['record_count'],
                 'rows_promoted': f['rows_promoted'],

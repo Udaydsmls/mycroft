@@ -1,7 +1,7 @@
 {
   "_provenance": {
     "fixture_set": "clean",
-    "raw_input": "data/raw/market-sentiment-analysis-part-1/runs/sample-001-clean/news-finnhub.json",
+    "quality_checked_by": "scripts/gigo/market-sentiment-analysis-part-1-transform-quality-check.py",
     "run_id": "sample-001",
     "source_envelope": {
       "fetched_at": "2026-08-27T14:30:00+00:00",
@@ -11,22 +11,38 @@
       "source_sha256": "441291ec39aed12cf4377c1b3b8e17ec3d369816d4aea67559077ef7b36de9e4",
       "source_type": "http_json"
     },
-    "validated_by": "scripts/gigo/market-sentiment-analysis-part-1-validate-data-shape.py"
+    "step3_input": "data/verified/market-sentiment-analysis-part-1/runs/sample-001-clean/news-finnhub.json"
   },
   "classification": "gigo",
-  "duplicates_deferred_to_step_4": true,
-  "freshness_deferred_to_step_4": true,
-  "node": "Validate data shape",
-  "promoted_locators": [
+  "duplicate_counting_rule": "A duplicate is every occurrence of an identity key beyond the first. Three rows sharing one key count as 2 duplicates, not 3 and not 1.",
+  "duplicates": [],
+  "flags": [],
+  "freshness_measured_from": "2026-08-27T14:30:00+00:00",
+  "freshness_window_days": 2,
+  "identity_keys": [
+    "id"
+  ],
+  "node": "Transform and quality check",
+  "quality_notes": [],
+  "record_count": 5,
+  "record_count_basis": "rows surviving dedup; flagged rows are kept, not dropped",
+  "rejects": [],
+  "rows_in": 5,
+  "rows_removed_as_duplicates": 0,
+  "schema_source": "data/raw/market-sentiment-analysis-part-1/sample/fixture-manifest.json",
+  "schema_version": "1.0.0",
+  "stream": "news",
+  "type_contract": {
+    "datetime": "epoch_int"
+  },
+  "verified_locators": [
     "records[0]",
     "records[1]",
     "records[2]",
     "records[3]",
     "records[4]"
   ],
-  "record_count": 5,
-  "record_count_basis": "rows that passed shape validation and were promoted",
-  "records": [
+  "verified_records": [
     {
       "category": "company",
       "datetime": 1787832300,
@@ -83,25 +99,5 @@
       "url": "https://example.invalid/news/900005"
     }
   ],
-  "required_fields": [
-    "id",
-    "datetime",
-    "headline",
-    "source",
-    "url"
-  ],
-  "schema_source": "data/raw/market-sentiment-analysis-part-1/sample/fixture-manifest.json",
-  "schema_version": "1.0.0",
-  "shape_validation": {
-    "count_matches_declared": true,
-    "malformed_rows": [],
-    "missing_fields": [],
-    "rows_promoted": 5,
-    "rows_seen": 5,
-    "rows_withheld": 0,
-    "source_declared_record_count": 5
-  },
-  "stream": "news",
-  "types_deferred_to_step_4": "Type violations are not checked here. This step has no declared field for them, so per fixture-manifest.json they surface in step 4 flags.",
   "workflow": "Market Sentiment Analysis - Part 1"
 }
