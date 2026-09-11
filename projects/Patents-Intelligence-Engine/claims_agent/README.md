@@ -36,8 +36,8 @@ Two things that make this manageable:
 - **BigQuery caches identical query results.** Re-running the exact
   same query against the same patent is free. All of our test scripts
   reuse the same known set of patents for this reason — check
-  `test_connection.py`, `test_real_parse.py`, and
-  `test_multi_dependent.py` for the specific publication numbers
+  `test_connection.py`, `test_real_parse.py`, `test_multi_dependent.py`,
+  and `test_broader_domains.py` for the specific publication numbers
   already paid for and cached.
 
 A smaller, cheaper-looking table
@@ -70,24 +70,48 @@ category `"bio"`). `claim_classifier.py` handles this by returning an
 `"unclear"` classification with an explicit note in the confidence
 caveat, rather than crashing — but it means some real patents,
 especially in biotech and pharma, won't get an automated scope
-reading at all.
+reading at all. Tested against 3 more real patents spanning mechanical,
+robotics, and minimally-invasive-surgery domains — zero refusals on
+that batch, so the refusal case is real but not yet common in the
+patents tried so far.
+
+## A real parsing gap found and fixed
+
+Broader-domain testing (`test_broader_domains.py`) found a real bug:
+`US-12551228-B2` uses `"1 ."` (a space before the period) for claim
+numbering instead of the `"1."` format seen in every patent tested up
+to that point. The original regex required the period immediately
+after the digits, so it silently returned 0 claims for a patent that
+genuinely had 14. Fixed by allowing optional whitespace between the
+number and the period — verified against both formats before and
+after the fix (see `inspect_parse_failure.py` for the investigation).
+
+**Open question, not yet explained**: every independent claim
+classified so far across the 3 broader-domain patents came back
+"narrow/defensive" — six claims in a row with no "broad" or
+"offensive" reading. This could reflect how those particular patents
+are actually drafted, or it could be a real bias in the classifier
+toward "narrow/defensive" as a safer-sounding default. Worth watching
+as more patents are tested, not yet concluded either way.
 
 ## What's tested, and how confident to be in each part
 
 | Component | Tested against | Confidence |
 |---|---|---|
-| `claims_parser.py` split/classify | 4 real patents, 64 claims, verified by hand | High — every claim correct |
-| `flag_multi_dependency` | Same 4 patents; one confirmed false-positive found and fixed | High, after the fix |
-| `claim_classifier.py` scope reading | 2 real independent claims so far | Moderate — both results were genuinely well-reasoned with specific, checkable caveats, but this is a small sample |
+| `claims_parser.py` split/classify | 7 real patents, 82 claims total, verified by hand | High — every claim correct, including a real formatting-variant fix |
+| `flag_multi_dependency` | Original 4 patents; one confirmed false-positive found and fixed | High, after the fix |
+| `claim_classifier.py` scope reading | 8 real independent claims across 4 patents, 4 domains (semiconductor, mechanical, robotics, medical device) | Moderate — every result was well-reasoned with specific, checkable caveats, but the "always narrow/defensive" pattern is an open question |
 
 ## Files
 
-- `claims_parser.py` — split/classify logic, tested
+- `claims_parser.py` — split/classify logic, tested, handles two known claim-numbering formats
 - `claim_classifier.py` — Claude-based protection-scope classification
 - `claims_agent.py` — the real `ClaimsAgent` class wiring both together
 - `test_connection.py` — verifies BigQuery access end-to-end
 - `test_real_parse.py` — pulls and parses one real patent's full claims text
 - `test_multi_dependent.py` — stress test against 3 more real patents, exact-match queries only
+- `test_broader_domains.py` — broader domain test (mechanical, robotics, medical device) that found the claim-numbering format bug
+- `inspect_parse_failure.py` — the investigation that found the real cause of the format bug
 - `inspect_independent_claims.py` — structural stats (word count, limitation markers) across known independent claims — the real evidence that these don't cleanly predict scope, which is why classification uses an LLM call rather than a heuristic
 - `test_classifier_first_run.py` — first real test of the classifier alone
 - `test_claims_agent.py` — real end-to-end test of the full `ClaimsAgent` class
@@ -96,4 +120,4 @@ reading at all.
 
 - Wiring `ClaimsAgent` into whatever will actually call it in production (a CLI, a batch job, etc. — currently it's a class with test scripts, not a deployed service)
 - The Lineage Agent's citation-tracing logic (not started)
-- Broader testing of the classifier across more independent claims and patent domains, especially to understand how often the biotech/pharma refusal case actually comes up in real usage
+- Explaining the "always narrow/defensive" pattern in classifier results — more real patents needed before concluding whether it's a real signal or a classifier bias
