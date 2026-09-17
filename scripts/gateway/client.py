@@ -5,9 +5,9 @@ logbook row first. That is the whole point: if logging were something the
 caller did afterwards, someone would eventually forget -- and a missing row
 does not look like an error, it looks like a cheaper month.
 
-This layer does NOT decide which tier to use, and does NOT retry. The caller
-names a tier and may pass a `check`; the row records what the check said.
-Deciding what to do about a failure belongs to gateway.py.
+This layer does NOT decide which tier to use. The caller names a tier, or
+Sprint 3's router does. Keeping the decision out of here is what lets the
+routing logic be tested as a pure function.
 """
 
 from __future__ import annotations
@@ -35,8 +35,6 @@ class CallResult:
     response: LLMResponse
     request_id: str
     record: dict[str, Any]
-    validator_result: dict[str, Any] | None = None
-    passed: bool = True
 
 
 class GatewayClient:
@@ -55,17 +53,12 @@ class GatewayClient:
 
     def call(self, *, task_type: str, caller: str, tier: str, prompt: str,
              max_tokens: int = 1024, request_id: str | None = None,
-             routing_reason: str = "policy",
-             check: Callable[[LLMResponse], dict[str, Any]] | None = None,
-             notes: str | None = None) -> CallResult:
+             routing_reason: str = "policy") -> CallResult:
         """Make one attempt and record it. Failures are recorded too.
 
         Pass an existing `request_id` to attach this attempt to a request
-        already in flight -- that is how escalation keeps a retry inside the
-        same logical request instead of starting a new one.
-
-        `check` runs before the row is written, so the row's outcome is
-        `validator_fail` with the reason, not a misleading `ok`.
+        already in flight -- that is how Sprint 4's escalation keeps a
+        retry inside the same logical request instead of starting a new one.
         """
         spec = self.tiers.get(tier)
         if spec is None:
@@ -97,24 +90,18 @@ class GatewayClient:
                 routing_reason=routing_reason, policy_version=self.policy_version,
                 tokens_in=0, tokens_out=0,
                 latency_ms=self._elapsed_ms(started),
-                outcome=exc.kind,
-                notes=" | ".join(x for x in (notes, str(exc)) if x),
+                outcome=exc.kind, notes=str(exc),
             )
             raise
-
-        result = check(response) if check else None
-        passed = result is None or bool(result.get("passed"))
 
         record = self.logbook.record_attempt(
             request_id, provider=provider, model=model, tier=tier,
             routing_reason=routing_reason, policy_version=self.policy_version,
             tokens_in=response.tokens_in, tokens_out=response.tokens_out,
             latency_ms=self._elapsed_ms(started),
-            outcome="ok" if passed else "validator_fail",
-            validator_result=result, notes=notes,
+            outcome="ok",
         )
-        return CallResult(response=response, request_id=request_id, record=record,
-                          validator_result=result, passed=passed)
+        return CallResult(response=response, request_id=request_id, record=record)
 
     def _elapsed_ms(self, started: float) -> int:
         return max(0, int(round((self.clock() - started) * 1000)))

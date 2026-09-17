@@ -91,11 +91,9 @@ def route(*, task_type: str, text: str, policy: Policy,
         why.append(f"input does not fit {tier}'s context window: moved to {up}")
         tier = up
 
-    # A null escalate_to means this task type is never retried, and stays null
-    # however the request was promoted. Otherwise escalation must go up from
-    # wherever the request actually starts.
-    escalate_to = rule.get("escalate_to")
-    if escalate_to is not None and order.index(escalate_to) <= order.index(tier):
+    # Escalation must go up from wherever the request actually starts.
+    escalate_to = rule["escalate_to"]
+    if order.index(escalate_to) <= order.index(tier):
         escalate_to = policy.next_tier_up(tier)
 
     return RoutingDecision(
