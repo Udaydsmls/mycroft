@@ -109,4 +109,4 @@ def test_every_task_type_routes_and_explains_itself(policy, tiers):
     for task_type in policy.task_types:
         d = route(task_type=task_type, text="short input", policy=policy, tiers=tiers)
         assert d.tier in policy.tier_order
-        assert d.tier in d.explanation
+        assert d.tier in d.explanation   
