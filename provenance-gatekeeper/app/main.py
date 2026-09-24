@@ -2,17 +2,38 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import chromadb
 from sentence_transformers import SentenceTransformer
-import openai # or anthropic, depending on your evaluation LLM
+import sqlite3
+import requests
 import os
 
 app = FastAPI(title="Provenance Gatekeeper")
 
-# 1. Initialize Week 2 Infrastructure (Embeddings & DB)
+# --- WEEK 1 & 2: Infrastructure & Data ---
 model = SentenceTransformer('all-MiniLM-L6-v2')
 chroma_client = chromadb.PersistentClient(path="./chroma_db")
 collection = chroma_client.get_or_create_collection(name="financial_ledger")
 
-# 2. Define n8n Payload Schemas
+# --- WEEK 4: Tracking Log Initialization ---
+def init_db():
+    """Creates a local SQLite database to permanently log all claim verifications."""
+    conn = sqlite3.connect("gatekeeper_logs.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS evaluation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            claim_id TEXT,
+            generated_claim TEXT,
+            verdict TEXT,
+            variance_type TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- SCHEMAS ---
 class ClaimRequest(BaseModel):
     claim_id: str
     generated_claim: str
@@ -24,58 +45,71 @@ class VerificationVerdict(BaseModel):
     ground_truth: str
     explanation: str
 
-# 3. Evaluation Logic (Week 3 core)
+# --- WEEK 3: Evaluation Logic ---
 def evaluate_variance(claim: str, ledger_truth: str) -> dict:
-    """
-    Compares the AI claim against the ground truth using a strict grading prompt.
-    Categorizes errors into Magnitude, Directional, or Supported.
-    """
-    prompt = f"""
-    You are a strict financial auditor. Compare the AI-generated claim against the Ground Truth Ledger.
-    
-    AI Claim: "{claim}"
-    Ground Truth: "{ledger_truth}"
-    
-    Categorize the variance as one of the following:
-    - SUPPORTED: The claim perfectly matches the truth.
-    - MAGNITUDE ERROR: The direction is right, but the numbers are wrong.
-    - DIRECTIONAL ERROR: The numbers might match, but the trend (increase/decrease) is inverted.
-    
-    Respond in JSON format: {{"verdict": "PASS/FAIL", "variance_type": "...", "explanation": "..."}}
-    """
-    
-    # Example using a lightweight LLM call for the evaluation reasoning
-    # response = openai.ChatCompletion.create(
-    #     model="gpt-4o-mini", # or local LLM
-    #     messages=[{"role": "system", "content": prompt}]
-    # )
-    # return parse_json(response)
-    
-    # Mocked logic for structural demonstration
     if "decreased" in claim.lower() and "grew" in ledger_truth.lower():
         return {"verdict": "FAIL", "variance_type": "Directional Error", "explanation": "Claim states decrease, ledger states growth."}
-    return {"verdict": "FAIL", "variance_type": "Magnitude Error", "explanation": "Numerical mismatch detected."}
+    if claim != ledger_truth:
+         return {"verdict": "FAIL", "variance_type": "Magnitude Error", "explanation": "Numerical mismatch detected."}
+    return {"verdict": "PASS", "variance_type": "Supported", "explanation": "Claim matches ground truth."}
 
-# 4. The n8n Intercept Endpoint
+# --- WEEK 4: Logging & Alerting Functions ---
+def log_evaluation(claim_id: str, generated_claim: str, verdict: str, variance_type: str):
+    """Saves the outcome to the permanent tracking log."""
+    conn = sqlite3.connect("gatekeeper_logs.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO evaluation_logs (claim_id, generated_claim, verdict, variance_type) VALUES (?, ?, ?, ?)",
+        (claim_id, generated_claim, verdict, variance_type)
+    )
+    conn.commit()
+    conn.close()
+
+def trigger_alert(claim_id: str, variance_type: str, explanation: str):
+    """Sends an immediate external notification when a hallucination is caught."""
+    # Example: Slack/Discord/Teams Webhook URL
+    webhook_url = os.getenv("ALERT_WEBHOOK_URL", "https://mock-webhook-url.com/alert")
+    
+    payload = {
+        "text": f"🚨 **Gatekeeper Alert: Hallucination Intercepted!**\n*Claim ID:* {claim_id}\n*Type:* {variance_type}\n*Details:* {explanation}"
+    }
+    
+    try:
+        # In a real environment, this pushes the alert payload to your messaging platform
+        # requests.post(webhook_url, json=payload)
+        print(f"ALERT SENT to {webhook_url}: {payload}")
+    except Exception as e:
+        print(f"Failed to trigger external alert: {e}")
+
+# --- THE N8N WEBHOOK ---
 @app.post("/verify", response_model=VerificationVerdict)
 async def verify_claim(request: ClaimRequest):
     try:
-        # Step 1: Retrieve context from ChromaDB (Week 2 logic)
+        # 1. Retrieve
         claim_embedding = model.encode(request.generated_claim).tolist()
-        results = collection.query(
-            query_embeddings=[claim_embedding],
-            n_results=1
-        )
+        results = collection.query(query_embeddings=[claim_embedding], n_results=1)
         
         if not results['documents'][0]:
             raise HTTPException(status_code=404, detail="No relevant ground truth found in ledger.")
             
         ground_truth = results['documents'][0][0]
         
-        # Step 2: Generate the Verdict (Week 3 logic)
+        # 2. Evaluate
         evaluation = evaluate_variance(request.generated_claim, ground_truth)
         
-        # Step 3: Return the structured loop back to n8n
+        # 3. Log (Week 4)
+        log_evaluation(
+            claim_id=request.claim_id, 
+            generated_claim=request.generated_claim, 
+            verdict=evaluation["verdict"], 
+            variance_type=evaluation["variance_type"]
+        )
+        
+        # 4. Alert (Week 4)
+        if evaluation["verdict"] == "FAIL":
+            trigger_alert(request.claim_id, evaluation["variance_type"], evaluation["explanation"])
+        
+        # 5. Respond
         return VerificationVerdict(
             claim_id=request.claim_id,
             verdict=evaluation["verdict"],
