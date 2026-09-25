@@ -24,7 +24,7 @@ Every file this run rests on, with the hash a reviewer can re-verify.
 
 | Path | Role | Present | SHA-256 (first 16) |
 |---|---|---|---|
-| `recipes/market-sentiment-analysis-part-1.md` | recipe under test - authoritative for intent (P6) | yes | feb877f5d71fe4de… |
+| `recipes/market-sentiment-analysis-part-1.md` | recipe under test - authoritative for intent (P6) | yes | f3089417ec0fb40e… |
 | `conductor/market-sentiment-analysis-part-1.md` | conductor flow | yes | 02681428081972d1… |
 | `data/raw/market-sentiment-analysis-part-1/run-envelope.json` | run control file - declares mode and the frozen clock | yes | 33828ed47a8c38fc… |
 | `data/raw/market-sentiment-analysis-part-1/sample/fixture-manifest.json` | fixture manifest - schema and defect catalogue | yes | 7ee88528523d5780… |
@@ -45,8 +45,8 @@ Every file this run rests on, with the hash a reviewer can re-verify.
 | `scripts/tools/market-sentiment-analysis-part-1-verify-provenance.py` | step script | yes | 3afb272debc044ae… |
 | `scripts/ingest/market-sentiment-analysis-part-1-ingest-inputs.py` | step script | yes | 0b7d6e1ad217e312… |
 | `scripts/gigo/market-sentiment-analysis-part-1-validate-data-shape.py` | step script | yes | 1b21e1acdb2e308f… |
-| `scripts/gigo/market-sentiment-analysis-part-1-transform-quality-check.py` | step script | yes | 7090c48fe30e24be… |
-| `scripts/tools/market-sentiment-analysis-part-1-run-approved-tools.py` | step script | yes | c9179cc024ef9f24… |
+| `scripts/gigo/market-sentiment-analysis-part-1-transform-quality-check.py` | step script | yes | 2cc69f0e1f81ee86… |
+| `scripts/tools/market-sentiment-analysis-part-1-run-approved-tools.py` | step script | yes | edb664608bbd2b21… |
 | `scripts/tools/market-sentiment-analysis-part-1-produce-human-report.py` | step script | yes | 3e65b2eb4117ced4… |
 
 ## Inputs used

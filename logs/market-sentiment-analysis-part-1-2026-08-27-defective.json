@@ -1,7 +1,7 @@
 {
   "artifact_hashes": {
     "data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/sample-001-defective-audit.md": "7958cf44b526d4da9341a2f1fbb5e304f3f1f4e14cefd1f288a0878e4959099c",
-    "reports/generated/market-sentiment-analysis-part-1-2026-08-27-defective.md": "f188d331eb9ac0972aa731cc1f12fda49d692ea399a6b7458947ecaf6a066661"
+    "reports/generated/market-sentiment-analysis-part-1-2026-08-27-defective.md": "92376861412aedf9a8e3f06d8f009d2eaca21cc7affd71e76c3b8204f8903c78"
   },
   "duplicates": [
     {
@@ -291,7 +291,7 @@
       "status": "evidence recorded; awaiting a named human"
     }
   ],
-  "generated_at": "2026-09-25T04:53:49.848239+00:00",
+  "generated_at": "2026-09-25T05:37:21.014398+00:00",
   "mode": "sample",
   "raw_output_paths": [
     "data/raw/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub-unparseable.json.broken",
@@ -375,8 +375,8 @@
       "exists": true,
       "path": "recipes/market-sentiment-analysis-part-1.md",
       "role": "recipe under test - authoritative for intent (P6)",
-      "sha256": "feb877f5d71fe4de8fbd9e45f3d3096c8169d41af79857c8a7f7ce1978131666",
-      "size_bytes": 23432
+      "sha256": "f3089417ec0fb40e852b02d071c7307795d1828ea41d6c82e81722e9dfafa349",
+      "size_bytes": 24115
     },
     {
       "exists": true,
@@ -529,15 +529,15 @@
       "exists": true,
       "path": "scripts/gigo/market-sentiment-analysis-part-1-transform-quality-check.py",
       "role": "step script",
-      "sha256": "7090c48fe30e24be171a82621ae6f49c169b7ac2a8aa775852e1043c2ec1b22d",
-      "size_bytes": 29251
+      "sha256": "2cc69f0e1f81ee867df341596c4a797cc710a841fe3b19706cda0d49ce324a4a",
+      "size_bytes": 29924
     },
     {
       "exists": true,
       "path": "scripts/tools/market-sentiment-analysis-part-1-run-approved-tools.py",
       "role": "step script",
-      "sha256": "c9179cc024ef9f24bf26e5618b4e50adfce612c9a689437355ea971802576ef8",
-      "size_bytes": 34895
+      "sha256": "edb664608bbd2b214e5308057e7ad0ada62e2f81caa9bec6a41557d1fff4a624",
+      "size_bytes": 35675
     },
     {
       "exists": true,
