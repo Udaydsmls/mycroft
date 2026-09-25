@@ -24,7 +24,7 @@ Every file this run rests on, with the hash a reviewer can re-verify.
 
 | Path | Role | Present | SHA-256 (first 16) |
 |---|---|---|---|
-| `recipes/market-sentiment-analysis-part-1.md` | recipe under test - authoritative for intent (P6) | yes | 14bb8f811a02a9f5… |
+| `recipes/market-sentiment-analysis-part-1.md` | recipe under test - authoritative for intent (P6) | yes | feb877f5d71fe4de… |
 | `conductor/market-sentiment-analysis-part-1.md` | conductor flow | yes | 02681428081972d1… |
 | `data/raw/market-sentiment-analysis-part-1/run-envelope.json` | run control file - declares mode and the frozen clock | yes | 33828ed47a8c38fc… |
 | `data/raw/market-sentiment-analysis-part-1/sample/fixture-manifest.json` | fixture manifest - schema and defect catalogue | yes | 7ee88528523d5780… |
@@ -36,16 +36,16 @@ Every file this run rests on, with the hash a reviewer can re-verify.
 | `data/raw/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub.json` | step-2 raw output | yes | 0d8cb1d8fe4cb8c5… |
 | `data/raw/market-sentiment-analysis-part-1/runs/sample-001-defective/price-alpha-vantage.json` | step-2 raw output | yes | 41b231cb3d0e89fb… |
 | `data/raw/market-sentiment-analysis-part-1/runs/sample-001-defective/reddit-wallstreetbets.json` | step-2 raw output | yes | b170511e1d348be9… |
-| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub.json` | verified output (step 3 or 4) | yes | a3ec1199e137267d… |
-| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/price-alpha-vantage.json` | verified output (step 3 or 4) | yes | 22b2724cdab61d35… |
+| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub.json` | verified output (step 3 or 4) | yes | f81b16452dcd1556… |
+| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/price-alpha-vantage.json` | verified output (step 3 or 4) | yes | 2f98626df068a40f… |
 | `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/quality-checked/news-finnhub.json` | verified output (step 3 or 4) | yes | 71f536d169fbd39b… |
 | `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/quality-checked/price-alpha-vantage.json` | verified output (step 3 or 4) | yes | 21200c5b2acc5f02… |
 | `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/quality-checked/reddit-wallstreetbets.json` | verified output (step 3 or 4) | yes | 54671cdf645862a7… |
-| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/reddit-wallstreetbets.json` | verified output (step 3 or 4) | yes | 4debf659ed0cbe48… |
+| `data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/reddit-wallstreetbets.json` | verified output (step 3 or 4) | yes | 5fadb4ddb2a3bd82… |
 | `logs/market-sentiment-analysis-part-1/runs/sample-001-defective/sentiment-scores.json` | step-5 sentiment scores | yes | 73f75357ccd0c1d2… |
 | `scripts/tools/market-sentiment-analysis-part-1-verify-provenance.py` | step script | yes | 3afb272debc044ae… |
 | `scripts/ingest/market-sentiment-analysis-part-1-ingest-inputs.py` | step script | yes | 0b7d6e1ad217e312… |
-| `scripts/gigo/market-sentiment-analysis-part-1-validate-data-shape.py` | step script | yes | 5842d7bec8c96f48… |
+| `scripts/gigo/market-sentiment-analysis-part-1-validate-data-shape.py` | step script | yes | 1b21e1acdb2e308f… |
 | `scripts/gigo/market-sentiment-analysis-part-1-transform-quality-check.py` | step script | yes | 7090c48fe30e24be… |
 | `scripts/tools/market-sentiment-analysis-part-1-run-approved-tools.py` | step script | yes | c9179cc024ef9f24… |
 | `scripts/tools/market-sentiment-analysis-part-1-produce-human-report.py` | step script | yes | 3e65b2eb4117ced4… |
@@ -75,8 +75,6 @@ An audit reports what it found; it does not say "pass". Every gate below is clea
 | 4 — Script-readiness gate | [IJ] | 6 of 6 step scripts exist | none | _awaiting_ |
 | 5 — Approval gate | [EI] | approval record absent at logs/gate-decisions/market-sentiment-analysis-part-1-approval.json; no live call, external write, or model call was performed | **1** | _awaiting_ |
 | 6 — Report gate | [TO] | agent log and human report written by this step; section and field coverage listed below | none | _awaiting_ |
-
-- **Gate 4 caveat:** This gate as written is satisfiable by doing nothing: it passes if the script exists OR if the [TODO: DEV] text is still in the recipe. Both are currently true.
 
 ## Steps completed
 

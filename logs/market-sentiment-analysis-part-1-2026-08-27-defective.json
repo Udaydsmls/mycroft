@@ -1,7 +1,7 @@
 {
   "artifact_hashes": {
     "data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/sample-001-defective-audit.md": "7958cf44b526d4da9341a2f1fbb5e304f3f1f4e14cefd1f288a0878e4959099c",
-    "reports/generated/market-sentiment-analysis-part-1-2026-08-27-defective.md": "ea418e595c7dc8974ebba4f634dfd044d1b6f8d30a7161b4072559603337b1e5"
+    "reports/generated/market-sentiment-analysis-part-1-2026-08-27-defective.md": "f188d331eb9ac0972aa731cc1f12fda49d692ea399a6b7458947ecaf6a066661"
   },
   "duplicates": [
     {
@@ -261,7 +261,7 @@
       "handoff_condition": "Every step script exists or is represented by a typed development TODO.",
       "human_capacity": "[IJ]",
       "name": "Script-readiness gate",
-      "note": "This gate as written is satisfiable by doing nothing: it passes if the script exists OR if the [TODO: DEV] text is still in the recipe. Both are currently true.",
+      "note": null,
       "status": "evidence recorded; awaiting a named human"
     },
     {
@@ -291,7 +291,7 @@
       "status": "evidence recorded; awaiting a named human"
     }
   ],
-  "generated_at": "2026-09-25T00:14:15.762054+00:00",
+  "generated_at": "2026-09-25T04:53:49.848239+00:00",
   "mode": "sample",
   "raw_output_paths": [
     "data/raw/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub-unparseable.json.broken",
@@ -375,8 +375,8 @@
       "exists": true,
       "path": "recipes/market-sentiment-analysis-part-1.md",
       "role": "recipe under test - authoritative for intent (P6)",
-      "sha256": "14bb8f811a02a9f5acc8849ee5a348968a62d27fa177de541a3c6309024849da",
-      "size_bytes": 18458
+      "sha256": "feb877f5d71fe4de8fbd9e45f3d3096c8169d41af79857c8a7f7ce1978131666",
+      "size_bytes": 23432
     },
     {
       "exists": true,
@@ -459,15 +459,15 @@
       "exists": true,
       "path": "data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/news-finnhub.json",
       "role": "verified output (step 3 or 4)",
-      "sha256": "a3ec1199e137267d7ed069c79df7f989705d176b878226a091a2581d3ed6a9a4",
-      "size_bytes": 4266
+      "sha256": "f81b16452dcd15569d63f7f3c29194ca6c3ee0921d129505d10e46d9e190b515",
+      "size_bytes": 4569
     },
     {
       "exists": true,
       "path": "data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/price-alpha-vantage.json",
       "role": "verified output (step 3 or 4)",
-      "sha256": "22b2724cdab61d355df5f46ee8714111eeb20defe9cf4fa3b7619805c18f8647",
-      "size_bytes": 3367
+      "sha256": "2f98626df068a40f449ce5dcd0196c1d6da77fa748777c49d9d51508e59b7e9a",
+      "size_bytes": 3696
     },
     {
       "exists": true,
@@ -494,8 +494,8 @@
       "exists": true,
       "path": "data/verified/market-sentiment-analysis-part-1/runs/sample-001-defective/reddit-wallstreetbets.json",
       "role": "verified output (step 3 or 4)",
-      "sha256": "4debf659ed0cbe48eac69abd554e096dca07efc54c879f56f82d1a0412514b58",
-      "size_bytes": 3623
+      "sha256": "5fadb4ddb2a3bd82b61c81194649059cff4a13d4a76593be37ca22451d32285a",
+      "size_bytes": 3939
     },
     {
       "exists": true,
@@ -522,8 +522,8 @@
       "exists": true,
       "path": "scripts/gigo/market-sentiment-analysis-part-1-validate-data-shape.py",
       "role": "step script",
-      "sha256": "5842d7bec8c96f48d3f64f12ff0d039301138b6ed6bda8e60b11ea4a90bd7777",
-      "size_bytes": 24825
+      "sha256": "1b21e1acdb2e308f759803e3637486f17f4f0c6c1cbd707368a532a5fd0cbf5e",
+      "size_bytes": 28107
     },
     {
       "exists": true,
