@@ -545,3 +545,59 @@ workflow changes.
   - [OPEN] `TYPE_CONTRACT` in steps 3 and 4 is still step-scoped, not promoted to `DATA_CONTRACT.md`.
   - [OPEN] No unit tests for the six scripts; CI runs none of the repo's existing Python tests.
   - [NOT COVERED] Wrong-entity signals, HTTP failure modes, encoding defects, volume/pagination.
+
+## 2026-10-04 -- contradiction-detection-agent: six step scripts built, sample run, promoted to RUNNABLE-SAMPLE
+
+- **Recipe:** `recipes/contradiction-detection-agent.md` v0.2.0, status RUNNABLE-SAMPLE, todos_open 0. Before this change it had no lifecycle frontmatter and its six step scripts were still to be written (`[TODO: DEV]`). Its 16 per-node scripts are left unchanged.
+- **Inputs:** the original workflow `data/mycroft-main/n8n-workflows/originals/n8n_Workflows/Contradiction_Detection_Agent/Contradiction_detection_agent.json` (26 nodes); a new frozen synthetic corpus `data/raw/contradiction-detection-agent/sample/` (16 fictional companies; 17 catalogued defects; `expected-flags.json` written from the original JavaScript before any port); `SNICKERDOODLE.md`; the recipe contract.
+- **Commands:**
+  - `python3 scripts/tools/contradiction-detection-agent-run-sample.py --fixture-set clean`: steps 1-6 exit 0 (16 companies, 13 flags)
+  - `python3 scripts/tools/contradiction-detection-agent-run-sample.py --fixture-set defective`: step 3 exits **1** by design (13 shape defects); step 6 still writes the report and audit
+  - `python3 scripts/tools/contradiction-detection-agent-parity-check.py`: exit 0, 16/16 companies match the original JavaScript (run under a Node shim)
+  - `python3 scripts/tools/contradiction-detection-agent-self-test.py`: exit 0, 38/38 checks as expected
+  - `python3 scripts/tools/contradiction-detection-agent-gate-check.py --gate 1` … `--gate 6`: all six pass
+  - `node scripts/conformance.mjs`: all conform; `node scripts/manifest-check.mjs`: passed
+- **Outputs:** step scripts `scripts/{tools,ingest,gigo}/contradiction-detection-agent-*.py` (6) and supporting scripts (run-sample, gate-check, parity-check, self-test); `data/raw|verified/contradiction-detection-agent/runs/sample-001-{clean,defective}/`; audits beside the verified data; `reports/generated/contradiction-detection-agent-2026-09-30-{clean,defective}.md`; `logs/contradiction-detection-agent-2026-09-30-{clean,defective}.json`; `logs/contradiction-detection-agent/self-test-results.{json,md}`; `logs/gate-decisions/contradiction-detection-agent-gate-{1..5}.json`.
+- **Result:**
+  - 17/17 catalogued defects detected at the step and row the manifest names, 0 false findings.
+  - The parity check catches 3 deliberately broken ports.
+  - Break tests (empty tree, live mode, changed fixture, repaired broken file, renamed node, step 5 before step 4, no half-built bundles) all stop as designed.
+  - Every gate test fails on an empty tree.
+  - Two clean runs are byte-identical.
+  - **Promotion evidence (DRAFT -> SPECIFIED -> RUNNABLE-SAMPLE):** the typed TODOs closed (DEV by the scripts plus conformance plus handoff conditions; DEFINE and APPROVE by the decisions below), a full sample run, conformance passing, and audits generated and read.
+- **Gate decisions:** Tanmay Kulkarni, 2026-10-04, verbatim "D1 clear, D2 deny, D3 keep, D4 log".
+  - Gates 1-4 approved for the sample run.
+  - Gate 5 **denied**: live mode declined, with four preconditions to reopen.
+  - `[TODO: DEFINE]` closed: thresholds kept as inherited, unvalidated.
+  - Pattern 3's wording kept as ported and logged in *Notes from porting*.
+  - Gate 6 not yet decided.
+- **Changes made this session:**
+  - The six gate tests now call `gate-check.py`, so each checks its condition directly and can fail. The previous tests are kept in the recipe for the record.
+  - New recipe sections: Notes from porting, Sample corpus and evidence, Supporting scripts.
+  - One stop condition added: no live run until queries pass their values as parameters.
+  - Per-node outline labelled historical, nothing deleted.
+- **Open issues:**
+  - [OPEN] Gate 6 decision.
+  - [OPEN] Live mode: the four preconditions in the gate-5 record.
+  - [NOT COVERED] Live behaviour, LLM output, and live failure modes.
+
+## 2026-10-04 -- contradiction-detection-agent: report step fixed during gate-6 review; gate 6 approved
+
+- **Recipe:** `recipes/contradiction-detection-agent.md` v0.2.0, status RUNNABLE-SAMPLE (unchanged), `last_gate` now gate 6.
+- **Found while reviewing the reports for gate 6** (in this recipe's own report step, `scripts/tools/contradiction-detection-agent-produce-human-report.py`):
+  - on the stopped (defective) run the report counted 13 rejects and the agent log 0, because the log counted step-4 rejects only;
+  - checks a stopped run never reached (duplicates, the lookback) were shown as 0 instead of "not checked";
+  - the clean report's recommendation still named gates 1-4, which were already decided.
+- **Changes:** one reject list now feeds both the report and the log; unchecked items say "not checked" (and the log lists them in `not_checked`); the recommendation is built from the gate records. New self-test section G checks all three and was confirmed to fail on the previous version (3 unexpected).
+- **Commands:**
+  - `python3 scripts/tools/contradiction-detection-agent-run-sample.py --fixture-set clean` and `--fixture-set defective`: as before (clean exit 0, 13 flags; defective stops at step 3 by design)
+  - `python3 scripts/tools/contradiction-detection-agent-parity-check.py`: exit 0, 16/16
+  - `python3 scripts/tools/contradiction-detection-agent-self-test.py`: exit 0, 42/42 checks as expected
+  - `python3 scripts/tools/contradiction-detection-agent-gate-check.py --gate 1` … `--gate 6`: all six pass
+  - `node scripts/conformance.mjs`: all conform; `node scripts/manifest-check.mjs`: passed
+- **Gate decisions:** Tanmay Kulkarni, 2026-10-04.
+  - "D1 clear" reconfirmed after the fix; gate 3 and 4 evidence re-hashed.
+  - Gate 6 **approved** ("D5 approve"): `logs/gate-decisions/contradiction-detection-agent-gate-6.json`, hashing both reports and both agent logs.
+- **Open issues:**
+  - [OPEN] Live mode: the four preconditions in the gate-5 record (needs live data access and a new decision by a named human).
+  - [NOT COVERED] Live behaviour, LLM output, and live failure modes.
