@@ -5,12 +5,11 @@ from sentence_transformers import SentenceTransformer
 import sqlite3
 import requests
 import os
-# WEEK 5: Import the newly created dashboard module
+import re
 from . import dashboard
 
 app = FastAPI(title="Provenance Gatekeeper")
 
-# WEEK 5: Mount the dashboard router to the main app
 app.include_router(dashboard.router)
 
 # --- WEEK 1 & 2: Infrastructure & Data ---
@@ -20,7 +19,6 @@ collection = chroma_client.get_or_create_collection(name="financial_ledger")
 
 # --- WEEK 4: Tracking Log Initialization ---
 def init_db():
-    """Creates a local SQLite database to permanently log all claim verifications."""
     conn = sqlite3.connect("gatekeeper_logs.db")
     cursor = conn.cursor()
     cursor.execute('''
@@ -50,17 +48,63 @@ class VerificationVerdict(BaseModel):
     ground_truth: str
     explanation: str
 
-# --- WEEK 3: Evaluation Logic ---
+# --- WEEK 6: Regex & Semantic Normalization ---
+def parse_financial_number(text: str) -> float | None:
+    """Extracts and normalizes numbers from messy string outputs (e.g. $4.5M -> 4500000.0)"""
+    if not text or text.lower() in ["null", "n/a", "none"]:
+        return None
+        
+    # Standardize phrasing
+    text = text.lower().replace(',', '')
+    text = text.replace('million', 'm').replace('billion', 'b').replace('thousand', 'k')
+    
+    # Extract the core number and optional suffix
+    match = re.search(r'[-+]?\d*\.?\d+\s*[kmb]?', text)
+    if not match:
+        return None
+        
+    val_str = match.group(0).strip()
+    
+    multiplier = 1
+    if val_str.endswith('m'):
+        multiplier = 1_000_000
+        val_str = val_str[:-1]
+    elif val_str.endswith('k'):
+        multiplier = 1_000
+        val_str = val_str[:-1]
+    elif val_str.endswith('b'):
+        multiplier = 1_000_000_000
+        val_str = val_str[:-1]
+        
+    try:
+        return float(val_str) * multiplier
+    except ValueError:
+        return None
+
 def evaluate_variance(claim: str, ledger_truth: str) -> dict:
+    """Upgraded evaluation using deterministic float normalization."""
+    # 1. Parse both sides
+    claim_val = parse_financial_number(claim)
+    truth_val = parse_financial_number(ledger_truth)
+    
+    # 2. Trap malformed text hallucinations and SQL injections
+    if claim_val is None:
+        return {"verdict": "FAIL", "variance_type": "Data Type Error", "explanation": "Payload contains no valid financial data."}
+    if truth_val is None:
+        return {"verdict": "ERROR", "variance_type": "Ledger Error", "explanation": "Ground truth is not a valid number."}
+        
+    # 3. Directional check (e.g., model claims decrease when truth is growth)
     if "decreased" in claim.lower() and "grew" in ledger_truth.lower():
         return {"verdict": "FAIL", "variance_type": "Directional Error", "explanation": "Claim states decrease, ledger states growth."}
-    if claim != ledger_truth:
-         return {"verdict": "FAIL", "variance_type": "Magnitude Error", "explanation": "Numerical mismatch detected."}
-    return {"verdict": "PASS", "variance_type": "Supported", "explanation": "Claim matches ground truth."}
+        
+    # 4. Magnitude validation
+    if claim_val != truth_val:
+         return {"verdict": "FAIL", "variance_type": "Magnitude Error", "explanation": f"Numerical mismatch: Extracted {claim_val} vs Truth {truth_val}"}
+         
+    return {"verdict": "PASS", "variance_type": "Supported", "explanation": "Claim matches ground truth magnitude."}
 
 # --- WEEK 4: Logging & Alerting Functions ---
 def log_evaluation(claim_id: str, generated_claim: str, verdict: str, variance_type: str):
-    """Saves the outcome to the permanent tracking log."""
     conn = sqlite3.connect("gatekeeper_logs.db")
     cursor = conn.cursor()
     cursor.execute(
@@ -71,17 +115,11 @@ def log_evaluation(claim_id: str, generated_claim: str, verdict: str, variance_t
     conn.close()
 
 def trigger_alert(claim_id: str, variance_type: str, explanation: str):
-    """Sends an immediate external notification when a hallucination is caught."""
-    # Example: Slack/Discord/Teams Webhook URL
     webhook_url = os.getenv("ALERT_WEBHOOK_URL", "https://mock-webhook-url.com/alert")
-    
     payload = {
         "text": f"🚨 **Gatekeeper Alert: Hallucination Intercepted!**\n*Claim ID:* {claim_id}\n*Type:* {variance_type}\n*Details:* {explanation}"
     }
-    
     try:
-        # In a real environment, this pushes the alert payload to your messaging platform
-        # requests.post(webhook_url, json=payload)
         print(f"ALERT SENT to {webhook_url}: {payload}")
     except Exception as e:
         print(f"Failed to trigger external alert: {e}")
@@ -90,7 +128,6 @@ def trigger_alert(claim_id: str, variance_type: str, explanation: str):
 @app.post("/verify", response_model=VerificationVerdict)
 def verify_claim(request: ClaimRequest):
     try:
-        # 1. Retrieve
         claim_embedding = model.encode(request.generated_claim).tolist()
         results = collection.query(query_embeddings=[claim_embedding], n_results=1)
         
@@ -98,11 +135,8 @@ def verify_claim(request: ClaimRequest):
             raise HTTPException(status_code=404, detail="No relevant ground truth found in ledger.")
             
         ground_truth = results['documents'][0][0]
-        
-        # 2. Evaluate
         evaluation = evaluate_variance(request.generated_claim, ground_truth)
         
-        # 3. Log (Week 4)
         log_evaluation(
             claim_id=request.claim_id, 
             generated_claim=request.generated_claim, 
@@ -110,11 +144,9 @@ def verify_claim(request: ClaimRequest):
             variance_type=evaluation["variance_type"]
         )
         
-        # 4. Alert (Week 4)
         if evaluation["verdict"] == "FAIL":
             trigger_alert(request.claim_id, evaluation["variance_type"], evaluation["explanation"])
         
-        # 5. Respond
         return VerificationVerdict(
             claim_id=request.claim_id,
             verdict=evaluation["verdict"],
