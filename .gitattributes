@@ -13,3 +13,22 @@ data/verified/market-sentiment-analysis-part-1/** text eol=lf
 # The step scripts are hashed into the report's source inventory as re-verifiable
 # evidence, so their bytes must not change with the checkout platform either.
 scripts/**/market-sentiment-analysis-part-1-*.py text eol=lf
+
+
+# contradiction-detection-agent: fixtures, run outputs, gate records and step scripts are SHA-256 hashed (fixture manifest,
+# gate-decision evidence), so their bytes must not change with the checkout platform. Our own files only:
+# the 16 per-node scripts generated for this recipe on 2026-06-06 are deliberately not listed.
+data/raw/contradiction-detection-agent/** text eol=lf
+data/verified/contradiction-detection-agent/** text eol=lf
+logs/contradiction-detection-agent/** text eol=lf
+logs/gate-decisions/contradiction-detection-agent-gate-*.json text eol=lf
+scripts/gigo/contradiction-detection-agent-transform-quality-check.py text eol=lf
+scripts/gigo/contradiction-detection-agent-validate-data-shape.py text eol=lf
+scripts/ingest/contradiction-detection-agent-ingest-inputs.py text eol=lf
+scripts/tools/contradiction-detection-agent-gate-check.py text eol=lf
+scripts/tools/contradiction-detection-agent-parity-check.py text eol=lf
+scripts/tools/contradiction-detection-agent-produce-human-report.py text eol=lf
+scripts/tools/contradiction-detection-agent-run-approved-tools.py text eol=lf
+scripts/tools/contradiction-detection-agent-run-sample.py text eol=lf
+scripts/tools/contradiction-detection-agent-self-test.py text eol=lf
+scripts/tools/contradiction-detection-agent-verify-provenance.py text eol=lf
